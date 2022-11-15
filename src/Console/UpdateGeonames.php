@@ -161,7 +161,7 @@ class UpdateGeonames extends AbstractCommand {
                 $geoname->admin4_code       = $obj->admin4_code;
                 $geoname->population        = $obj->population;
                 $geoname->elevation         = $obj->elevation;
-                $geoname->dem               = $obj->dem;
+                $geoname->dem               = ($obj->dem < 0)?0:$obj->dem;
                 $geoname->timezone          = $obj->timezone;
                 $geoname->modification_date = $obj->modification_date;
 
@@ -270,7 +270,7 @@ class UpdateGeonames extends AbstractCommand {
 
             // Null is different than zero, which was getting entered when the field was blank.
             $object->elevation = empty( $array[ 15 ] ) ? NULL : $array[ 15 ];
-            $object->dem       = empty( $array[ 16 ] ) ? NULL : $array[ 16 ];
+            $object->dem       = empty( $array[ 16 ] || $array[ 16 ] < 0 ) ? NULL : $array[ 16 ];
 
             $object->timezone          = $array[ 17 ];
             $object->modification_date = $array[ 18 ];
