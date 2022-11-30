@@ -37,6 +37,7 @@ class UpdateAlternateNames extends AbstractCommand {
      * @var string
      */
     protected $modificationsTxtFileNamePrefix = 'alternateNamesModifications-';
+    protected $deletesTxtFileNamePrefix = 'alternateNamesDeletes-';
 
     /**
      * Set in the constructor.
@@ -333,7 +334,7 @@ class UpdateAlternateNames extends AbstractCommand {
      */
     protected function filterModificationsLink( array $links ): string {
         foreach ( $links as $link ) {
-            if ( preg_match( '/^modifications-/', $link ) === 1 ) {
+            if ( preg_match( '/^'. $this->modificationsTxtFileNamePrefix .'/', $link ) === 1 ) {
                 return $link;
             }
         }
@@ -376,7 +377,7 @@ class UpdateAlternateNames extends AbstractCommand {
 
     protected function filterDeletesLink( array $links ): string {
         foreach ( $links as $link ) {
-            if ( preg_match( '/^alternateNamesDeletes-/', $link ) === 1 ) {
+            if ( preg_match( '/^'. $this->deletesTxtFileNamePrefix .'/', $link ) === 1 ) {
                 return $link;
             }
         }
@@ -454,7 +455,7 @@ class UpdateAlternateNames extends AbstractCommand {
      */
     protected function getDateFromDeletesFileName( string $fileNameOfDeletesFile ): Carbon {
         $matches = [];
-        $pattern = '/alternateNamesDeletes-(\d{4}-\d{2}-\d{2})\.txt$/';
+        $pattern = '/'. $this->deletesTxtFileNamePrefix .'(\d{4}-\d{2}-\d{2})\.txt$/';
         $result  = preg_match( $pattern, $fileNameOfDeletesFile, $matches );
         if ( FALSE === $result ) {
             throw new \Exception( "There was an error running preg_match() in getDateFromDeletesFileName() on the string [" . $fileNameOfDeletesFile . "]" );
