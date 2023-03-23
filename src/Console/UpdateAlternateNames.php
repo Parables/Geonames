@@ -142,9 +142,8 @@ class UpdateAlternateNames extends AbstractCommand {
 
         foreach ( $modificationRows as $i => $obj ):
             try {
-                $alternateName = AlternateName::firstOrNew( [ 'AlternateNameId' => $obj->alternateNameId ] );
+                $alternateName = AlternateName::firstOrNew( [ 'alternateNameId' => $obj->alternateNameId ] );
 
-                $alternateName->name            = $obj->name;
                 $alternateName->geonameid       = $obj->geonameid;
                 $alternateName->isolanguage     = $obj->isolanguage;
                 $alternateName->alternate_name  = $obj->alternate_name;
