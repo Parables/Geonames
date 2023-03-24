@@ -32,25 +32,20 @@ class CheckUpdatesCommand extends Command
      */
     public function handle(Client $client)
     {
-        $today = date('Y-m-d');
         $localDirectoryPath = GeoSetting::getAbsoluteLocalStoragePath( $this->connectionName );
         $crawler = $client->request( 'GET', 'http://download.geonames.org/export/dump/');
-
-
-
         foreach($crawler->filter( 'a' )->each( function ( Crawler $node ) {
             return $node->attr( 'href' );
         }) as $link){
             $filename = basename($link);
-            if(in_array($filename, ['modifications-' . $today . '.txt', 'deletes-' . $today . '.txt'])
+            if(preg_match( '/^modifications-|deletes-/', $link ) === 1
                 && !file_exists($localDirectoryPath . DIRECTORY_SEPARATOR . $filename)){
                 $this->call( 'geonames:update-geonames', [ '--connection' => $this->connectionName ] );
             }
-            if(in_array($filename, ['alternateNamesModifications-' . $today . '.txt', 'alternateNamesDeletes-' . $today . '.txt'])
+            if(preg_match( '/^alternateNamesModifications-|alternateNamesDeletes-/', $link ) === 1
                 && !file_exists($localDirectoryPath . DIRECTORY_SEPARATOR . $filename)){
                     $this->call( 'geonames:update-alternate-names', [ '--connection' => $this->connectionName ] );
             }
-
         }
         return Command::SUCCESS;
     }

@@ -41,21 +41,30 @@ class GeonamesServiceProvider extends \Illuminate\Support\ServiceProvider {
 
                                Console\UpdateGeonames::class,
                                Console\UpdateAlternateNames::class,
+                               Console\CheckUpdatesCommand::class,
                                Console\Status::class,
                                Console\Test::class ] );
         }
 
         // Schedule our Update command to run once a day. Keep our tables up to date.
-        /*$this->app->booted( function () {
+        $dailyAt = config( 'geonames.update_daily_at' );
+        if ($dailyAt) {
+            $this->app->booted( function () use ( $dailyAt ) {
             $schedule = app( Schedule::class );
-            $schedule->command( 'geonames:update' )->dailyAt( '05:00' )->withoutOverlapping();
-        } );*/
+                $schedule->command( 'geonames:check-update' )->dailyAt( $dailyAt )->withoutOverlapping();
+            });
+        }
 
-        $this->loadRoutesFrom( __DIR__ . '/Routes/web.php' );
+        if(!config( 'geonames.disable_routes' ))
+            $this->loadRoutesFrom( __DIR__ . '/Routes/web.php' );
 
         $this->publishes( [
                               __DIR__ . '/Migrations/' => database_path( 'migrations' ),
                           ], 'migrations' );
+
+        $this->publishes( [
+                              __DIR__ . '/config/geonames.php' => config_path( 'geonames.php' ),
+                          ], 'config' );
     }
 
 
