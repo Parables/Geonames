@@ -29,10 +29,10 @@ class UpdateAlternateNames extends AbstractCommand {
      *
      * @var string
      */
-    protected $description = "Download the modifications txt file from geonames.org, then update our database.";
+    protected $description = "Download the alternate names modifications and deletes txt file from geonames.org, then update our database.";
 
     /**
-     * The actual file name looks like 'modifications-2017-02-22.txt' which we will set in the constructor.
+     * The actual file name looks like 'alternateNamesModifications-2017-02-22.txt' and 'alternateNamesDeletes-2017-02-22.txt' which we will set in the constructor.
      *
      * @var string
      */
@@ -140,7 +140,7 @@ class UpdateAlternateNames extends AbstractCommand {
         $this->comment( "\nProcessing the rows to be modified..." );
         $bar = $this->output->createProgressBar( count( $modificationRows ) );
 
-        foreach ( $modificationRows as $i => $obj ):
+        foreach ( $modificationRows as $obj ):
             try {
                 $alternateName = AlternateName::firstOrNew( [ 'alternateNameId' => $obj->alternateNameId ] );
 
