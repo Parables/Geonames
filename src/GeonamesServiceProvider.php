@@ -50,7 +50,7 @@ class GeonamesServiceProvider extends \Illuminate\Support\ServiceProvider {
         $dailyAt = config( 'geonames.update_daily_at' );
         if ($dailyAt) {
             $this->app->booted( function () use ( $dailyAt ) {
-            $schedule = app( Schedule::class );
+                $schedule = app( Schedule::class );
                 $schedule->command( 'geonames:check-update' )->dailyAt( $dailyAt )->withoutOverlapping();
             });
         }

@@ -15,7 +15,7 @@ class CheckUpdatesCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'geonames:check-update
+    protected $signature = 'geonames:check-updates
     {--connection= : If you want to specify the name of the database connection you want used.}';
 
     /**
