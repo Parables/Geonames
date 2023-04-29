@@ -2,21 +2,17 @@
 
 namespace MichaelDrennen\Geonames\Console;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Console\Command;
 use Carbon\Carbon;
-use MichaelDrennen\Geonames\Models\AlternateName;
 use Symfony\Component\DomCrawler\Crawler;
 use Curl\Curl;
 use Goutte\Client;
 use StdClass;
-use MichaelDrennen\Geonames\Models\GeonamesDelete;
-use MichaelDrennen\Geonames\Models\Geoname;
+use MichaelDrennen\Geonames\Models\AlternateName;
 use MichaelDrennen\Geonames\Models\Log;
 use MichaelDrennen\Geonames\Models\GeoSetting;
 
 
-class UpdateGeonames extends AbstractCommand {
+class UpdateAlternateNames extends AbstractCommand {
 
     use GeonamesConsoleTrait;
 
@@ -25,7 +21,7 @@ class UpdateGeonames extends AbstractCommand {
      *
      * @var string
      */
-    protected $signature = 'geonames:update-geonames
+    protected $signature = 'geonames:update-alternate-names
     {--connection= : If you want to specify the name of the database connection you want used.}';
 
     /**
@@ -33,14 +29,15 @@ class UpdateGeonames extends AbstractCommand {
      *
      * @var string
      */
-    protected $description = "Download the modifications txt file from geonames.org, then update our database.";
+    protected $description = "Download the alternate names modifications and deletes txt file from geonames.org, then update our database.";
 
     /**
-     * The actual file name looks like 'modifications-2017-02-22.txt' which we will set in the constructor.
+     * The actual file name looks like 'alternateNamesModifications-2017-02-22.txt' and 'alternateNamesDeletes-2017-02-22.txt' which we will set in the constructor.
      *
      * @var string
      */
-    protected $modificationsTxtFileNamePrefix = 'modifications-';
+    protected $modificationsTxtFileNamePrefix = 'alternateNamesModifications-';
+    protected $deletesTxtFileNamePrefix = 'alternateNamesDeletes-';
 
     /**
      * Set in the constructor.
@@ -89,7 +86,7 @@ class UpdateGeonames extends AbstractCommand {
 
 
     /**
-     * UpdateGeonames constructor.
+     * UpdateAlternateNames constructor.
      *
      * @param \Curl\Curl $curl
      * @param \Goutte\Client $client
@@ -143,47 +140,37 @@ class UpdateGeonames extends AbstractCommand {
         $this->comment( "\nProcessing the rows to be modified..." );
         $bar = $this->output->createProgressBar( count( $modificationRows ) );
 
-        foreach ( $modificationRows as $i => $obj ):
+        foreach ( $modificationRows as $obj ):
             try {
-                $geoname = Geoname::firstOrNew( [ 'geonameid' => $obj->geonameid ] );
+                $alternateName = AlternateName::firstOrNew( [ 'alternateNameId' => $obj->alternateNameId ] );
 
-                $geoname->name              = $obj->name;
-                $geoname->asciiname         = $obj->asciiname;
-                $geoname->alternatenames    = $obj->alternatenames;
-                $geoname->latitude          = $obj->latitude;
-                $geoname->longitude         = $obj->longitude;
-                $geoname->feature_class     = $obj->feature_class;
-                $geoname->feature_code      = $obj->feature_code;
-                $geoname->country_code      = $obj->country_code;
-                $geoname->cc2               = $obj->cc2;
-                $geoname->admin1_code       = $obj->admin1_code;
-                $geoname->admin2_code       = $obj->admin2_code;
-                $geoname->admin3_code       = $obj->admin3_code;
-                $geoname->admin4_code       = $obj->admin4_code;
-                $geoname->population        = $obj->population;
-                $geoname->elevation         = $obj->elevation;
-                $geoname->dem               = ($obj->dem < 0)?0:$obj->dem;
-                $geoname->timezone          = $obj->timezone;
-                $geoname->modification_date = $obj->modification_date;
+                $alternateName->geonameid       = $obj->geonameid;
+                $alternateName->isolanguage     = $obj->isolanguage;
+                $alternateName->alternate_name  = $obj->alternate_name;
+                $alternateName->isPreferredName = $obj->isPreferredName;
+                $alternateName->isShortName     = $obj->isShortName;
+                $alternateName->isColloquial    = $obj->isColloquial;
+                $alternateName->isHistoric      = $obj->isHistoric;
 
-                if ( !$geoname->isDirty() ) {
-                    //$this->info( "Geoname record " . $obj->geonameid . " does not need to be updated." );
+
+                if ( !$alternateName->isDirty() ) {
+                    //$this->info( "Alternate Name record " . $obj->alternateNameId . " does not need to be updated." );
                     $bar->advance();
                     continue;
                 }
 
-                $saveResult = $geoname->save();
+                $saveResult = $alternateName->save();
 
                 if ( $saveResult ) {
 
-                    if ( $geoname->wasRecentlyCreated ):
+                    if ( $alternateName->wasRecentlyCreated ):
                         Log::insert( '',
-                                     "Geoname record " . $obj->geonameid . " was inserted.",
+                                     "Alternate Name record " . $obj->alternateNameId . " was inserted.",
                                      "create",
                                      $this->connectionName );
                     else:
                         Log::modification( '',
-                                           "Geoname record [" . $obj->geonameid . "] was updated.",
+                                           "Alternate Name record [" . $obj->alternateNameId . "] was updated.",
                                            "update",
                                            $this->connectionName );
                         $this->info( "exited modification without throwing an exception" );
@@ -193,7 +180,7 @@ class UpdateGeonames extends AbstractCommand {
 
                 } else {
                     Log::error( '',
-                                "Unable to updateOrCreate geoname record: [" . $obj->geonameid . "]",
+                                "Unable to updateOrCreate Alternate Name record: [" . $obj->alternateNameId . "]",
                                 'database',
                                 $this->connectionName );
                     $bar->advance();
@@ -201,7 +188,7 @@ class UpdateGeonames extends AbstractCommand {
 
             } catch ( \Exception $e ) {
                 Log::error( '',
-                            "{" . $e->getMessage() . "} Unable to save the geoname record with id: [" . $obj->geonameid . "]",
+                            "{" . $e->getMessage() . "} Unable to save the Alternate Name record with id: [" . $obj->alternateNameId . "]",
                             'database',
                             $this->connectionName );
                 $bar->advance();
@@ -242,43 +229,26 @@ class UpdateGeonames extends AbstractCommand {
         $modificationRows = file( $absoluteLocalFilePath );
 
         // An array of StdClass objects to be passed to the Laravel model.
-        $geonamesData = [];
+        $alternateNamesData = [];
         foreach ( $modificationRows as $row ):
 
             $array = explode( "\t", $row );
             $array = array_map( 'trim', $array );
 
-            $object                 = new StdClass;
-            $object->geonameid      = $array[ 0 ];
-            $object->name           = $array[ 1 ];
-            $object->asciiname      = $array[ 2 ];
-            $object->alternatenames = $array[ 3 ];
+            $object                     = new StdClass;
+            $object->alternateNameId    = $array[ 0 ];
+            $object->geonameid          = $array[ 1 ];
+            $object->isolanguage        = $array[ 2 ];
+            $object->alternate_name     = $array[ 3 ];
+            $object->isPreferredName    = empty( $array[ 4 ] ) ? 0 : (int) $array[ 4 ];
+            $object->isShortName        = empty( $array[ 5 ] ) ? 0 : (int) $array[ 5 ];
+            $object->isColloquial       = empty( $array[ 6 ] ) ? 0 : (int) $array[ 6 ];
+            $object->isHistoric         = empty( $array[ 7 ] ) ? 0 : (int) $array[ 7 ];
 
-            // The lat and long fields are decimal (nullable), so if the value in the modifications file is blank, we
-            // want the value to be null instead of 0 (zero).
-            $object->latitude  = empty( $array[ 4 ] ) ? NULL : number_format( (float)$array[ 4 ], 8 );
-            $object->longitude = empty( $array[ 5 ] ) ? NULL : number_format( (float)$array[ 5 ], 8 );
-
-            $object->feature_class = $array[ 6 ];
-            $object->feature_code  = $array[ 7 ];
-            $object->country_code  = $array[ 8 ];
-            $object->cc2           = $array[ 9 ];
-            $object->admin1_code   = $array[ 10 ];
-            $object->admin2_code   = $array[ 11 ];
-            $object->admin3_code   = $array[ 12 ];
-            $object->admin4_code   = $array[ 13 ];
-            $object->population    = $array[ 14 ];
-
-            // Null is different than zero, which was getting entered when the field was blank.
-            $object->elevation = empty( $array[ 15 ] ) ? NULL : $array[ 15 ];
-            $object->dem       = empty( $array[ 16 ] || $array[ 16 ] < 0 ) ? NULL : $array[ 16 ];
-
-            $object->timezone          = $array[ 17 ];
-            $object->modification_date = $array[ 18 ];
-            $geonamesData[]            = $object;
+            $alternateNamesData[] = $object;
         endforeach;
 
-        return $geonamesData;
+        return $alternateNamesData;
     }
 
 
@@ -363,7 +333,7 @@ class UpdateGeonames extends AbstractCommand {
      */
     protected function filterModificationsLink( array $links ): string {
         foreach ( $links as $link ) {
-            if ( preg_match( '/^modifications-/', $link ) === 1 ) {
+            if ( preg_match( '/^'. $this->modificationsTxtFileNamePrefix .'/', $link ) === 1 ) {
                 return $link;
             }
         }
@@ -384,83 +354,29 @@ class UpdateGeonames extends AbstractCommand {
 
         foreach ( $deletionRows as $obj ):
 
-            try {
-                $geonamesDelete = GeonamesDelete::firstOrNew( [
-                                                                  'geonameid' => $obj->geonameid,
-                                                                  'date'      => $dateFromFileName, ] );
+            $numRecordsDeleted = $this->deleteAlternateNameRecord( $obj->alternateNameId );
+            if ( 1 > $numRecordsDeleted ):
+                $this->info( "Alternate Name: " . $obj->alternateNameId . " was deleted." );
+            else:
+                $this->comment( "Alternate Name: " . $obj->alternateNameId . " has already been deleted." );
+            endif;
+            $bar->advance();
 
-                $geonamesDelete->date   = $obj->date;
-                $geonamesDelete->name   = $obj->name;
-                $geonamesDelete->reason = $obj->reason;
-
-
-                if ( !$geonamesDelete->isDirty() ) {
-                    //$this->info( "GeonamesDelete record " . $obj->geonameid . " does not need to be updated." );
-                    $bar->advance();
-                    continue;
-                }
-
-                $saveResult = $geonamesDelete->save();
-
-                if ( $saveResult ):
-
-                    if ( $geonamesDelete->wasRecentlyCreated ) {
-                        Log::insert(
-                            '',
-                            "GeonamesDelete record " . $obj->geonameid . " was inserted.",
-                            "create",
-                            $this->connectionName );
-                    } else {
-                        Log::modification(
-                            '',
-                            "GeonamesDelete record " . $obj->geonameid . " was updated.",
-                            "update",
-                            $this->connectionName );
-                    }
-                    $bar->advance();
-
-
-                    $numRecordsDeleted = $this->deleteGeonameRecord( $geonamesDelete->{GeonamesDelete::geonameid} );
-                    AlternateName::where('geonameid', $obj->geonameid)->delete();
-                    if ( 1 > $numRecordsDeleted ):
-                        $this->info( "Geoname: " . $geonamesDelete->{GeonamesDelete::geonameid} . " was deleted." );
-                    else:
-                        $this->comment( "Geoname: " . $geonamesDelete->{GeonamesDelete::geonameid} . " has already been deleted." );
-                    endif;
-
-
-                else:
-                    Log::error(
-                        '',
-                        "Unable to updateOrCreate GeonamesDelete record: [" . $obj->geonameid . "]",
-                        'database',
-                        $this->connectionName );
-                    $bar->advance();
-                    continue;
-                endif;
-
-            } catch ( \Exception $e ) {
-                Log::error( '',
-                            $e->getMessage() . " Unable to save the GeonamesDelete record with id: [" . $obj->geonameid . "]",
-                            'database',
-                            $this->connectionName );
-                $bar->advance();
-            }
         endforeach;
     }
 
     /**
-     * @param int $geonameid
+     * @param int $alternateNameId
      * @return int
      */
-    protected function deleteGeonameRecord( int $geonameid ) {
-        $this->comment( "Deleting geonameid: " . $geonameid );
-        return Geoname::destroy( $geonameid );
+    protected function deleteAlternateNameRecord( int $alternateNameId ) {
+        $this->comment( "Deleting alternateNameId: " . $alternateNameId );
+        return AlternateName::destroy( $alternateNameId );
     }
 
     protected function filterDeletesLink( array $links ): string {
         foreach ( $links as $link ) {
-            if ( preg_match( '/^deletes-/', $link ) === 1 ) {
+            if ( preg_match( '/^'. $this->deletesTxtFileNamePrefix .'/', $link ) === 1 ) {
                 return $link;
             }
         }
@@ -519,10 +435,10 @@ class UpdateGeonames extends AbstractCommand {
             $array = array_map( 'trim', $array );
 
             $object            = new StdClass;
-            $object->geonameid = $array[ 0 ];
-            $object->name      = $array[ 1 ];
-            $object->reason    = $array[ 2 ];
-            $object->date      = $dateFromFileName->toDateString();
+            $object->alternateNameId    = $array[ 0 ];
+            $object->name               = $array[ 1 ];
+            $object->reason             = $array[ 2 ];
+            $object->date               = $dateFromFileName->toDateString();
 
             $deleteRecords[] = $object;
         endforeach;
@@ -538,7 +454,7 @@ class UpdateGeonames extends AbstractCommand {
      */
     protected function getDateFromDeletesFileName( string $fileNameOfDeletesFile ): Carbon {
         $matches = [];
-        $pattern = '/deletes-(\d{4}-\d{2}-\d{2})\.txt$/';
+        $pattern = '/'. $this->deletesTxtFileNamePrefix .'(\d{4}-\d{2}-\d{2})\.txt$/';
         $result  = preg_match( $pattern, $fileNameOfDeletesFile, $matches );
         if ( FALSE === $result ) {
             throw new \Exception( "There was an error running preg_match() in getDateFromDeletesFileName() on the string [" . $fileNameOfDeletesFile . "]" );

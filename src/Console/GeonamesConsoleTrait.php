@@ -183,7 +183,7 @@ trait GeonamesConsoleTrait {
 
             $geonamesBar->setMessage( $basename );
 
-            $curl->verbose();
+            $curl->setVerbose();
             $curl->setopt( CURLOPT_NOPROGRESS, FALSE );
             $curl->setopt( CURLOPT_PROGRESSFUNCTION,
                 function ( $resource, $download_size = 0, $downloaded = 0, $upload_size = 0, $uploaded = 0 ) use ( $geonamesBar ) {
