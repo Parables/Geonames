@@ -343,9 +343,6 @@ trait GeonamesConsoleTrait
       case 'mysql':
         return true;
 
-      case 'pgsql':
-        return true;
-
       case 'sqlite':
         return false;
 
@@ -398,4 +395,3 @@ trait GeonamesConsoleTrait
     DB::connection($this->connectionName)->statement($statement);
   }
 }
-
